@@ -5,5 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "pandas>=3.1.0",
     "python-dotenv>=1.2.4",
+    "requests>=2.34.2",
+]
+
+[dependency-groups]
+dev = [
+    "pandas-stubs>=3.1.0.261029",
+    "types-requests>=2.33.0.20261030",
 ]
