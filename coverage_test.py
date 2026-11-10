@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_CSV = os.path.join(SCRIPT_DIR, "data", "raw", "wikidata_pairs.csv")
 OUTPUT_CSV = os.path.join(SCRIPT_DIR, "coverage_sample.csv")
-SAMPLE_SIZE = None  # Set to None to process every pair.
+SAMPLE_SIZE = 10  # Set to None to process every pair.
+START_ROW = 10
 MATCH_THRESHOLD = 0.85
 REQUEST_INTERVAL = 0.7
 
@@ -266,14 +267,38 @@ def main():
     df["tmdb"] = pd.to_numeric(df["tmdb"], errors="coerce")
     df = df.drop_duplicates(subset=["film", "book"])
     df = df.sort_values("filmLinks", ascending=False)
+    df = df[INPUT_COLUMNS].reset_index(drop=True)
+    if START_ROW < 0:
+        raise SystemExit("START_ROW must be non-negative.")
+    total_rows = len(df)
+    df = df.iloc[START_ROW:].reset_index(drop=True)
     if SAMPLE_SIZE is not None:
         df = df.head(SAMPLE_SIZE)
-    df = df[INPUT_COLUMNS].reset_index(drop=True)
     if df.empty:
-        raise SystemExit("No input rows to process after filtering and sampling.")
+        raise SystemExit(f"No input rows to process after row {START_ROW}.")
+
+    existing_output = None
+    if START_ROW > 0:
+        if not os.path.isfile(OUTPUT_CSV):
+            raise SystemExit(
+                f"Cannot resume at row {START_ROW}: output file not found: {OUTPUT_CSV}"
+            )
+        existing_output = pd.read_csv(OUTPUT_CSV)
+        if existing_output.columns.tolist() != OUTPUT_COLUMNS:
+            raise SystemExit(
+                f"Cannot resume: output file must have these columns in order: "
+                f"{OUTPUT_COLUMNS}"
+            )
+        if len(existing_output) < START_ROW:
+            raise SystemExit(
+                f"Cannot resume at row {START_ROW}: output file has only "
+                f"{len(existing_output)} data rows."
+            )
 
     rows = []
-    for index, row in df.iterrows():
+    for output_index, (_, row) in enumerate(
+        df.iterrows(), start=START_ROW + 1
+    ):
         film = tmdb_lookup(row["tmdb"], tmdb_api_key)
         openlibrary = openlibrary_lookup(row["bookLabel"], row["authorLabel"])
         hardcover = hardcover_lookup(
@@ -288,11 +313,21 @@ def main():
             }
         )
         print(
-            f"[{index + 1}/{len(df)}] {row['bookLabel']} -> "
+            f"[{output_index}/{total_rows}] {row['bookLabel']} -> "
             f"TMDb: {film['title_tmdb']}"
         )
 
     output = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
+    if existing_output is not None:
+        end_row = START_ROW + len(output)
+        output = pd.concat(
+            [
+                existing_output.iloc[:START_ROW],
+                output,
+                existing_output.iloc[end_row:],
+            ],
+            ignore_index=True,
+        )
     output.to_csv(OUTPUT_CSV, index=False)
     print("\nRating coverage:")
     for source, title_column, votes_column in [
@@ -303,7 +338,10 @@ def main():
         matched = output[title_column].notna().sum()
         votes = output[votes_column].fillna(0)
         print(f"{source}: {matched} matched, {(votes > 0).sum()} rated, {(votes >= 10).sum()} with 10+ votes")
-    print(f"\nSaved {len(output)} rows to {OUTPUT_CSV}")
+    print(
+        f"\nSaved {len(rows)} rows starting at row {START_ROW + 1}; "
+        f"output has {len(output)} total rows at {OUTPUT_CSV}"
+    )
 
 
 if __name__ == "__main__":

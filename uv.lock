@@ -156,6 +156,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "pandas" },
+    { name = "pandas-stubs" },
     { name = "python-dotenv" },
     { name = "requests" },
 ]
@@ -169,6 +170,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pandas", specifier = ">=3.1.0" },
+    { name = "pandas-stubs", specifier = ">=3.1.0.261029" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "requests", specifier = ">=2.34.2" },
 ]
