@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_CSV = os.path.join(SCRIPT_DIR, "data", "raw", "wikidata_pairs.csv")
 OUTPUT_CSV = os.path.join(SCRIPT_DIR, "coverage_sample.csv")
-SAMPLE_SIZE = 50  # Set to None to process every pair.
+SAMPLE_SIZE = None  # Set to None to process every pair.
 MATCH_THRESHOLD = 0.85
 REQUEST_INTERVAL = 0.7
 
@@ -30,6 +30,8 @@ INPUT_COLUMNS = [
 
 OUTPUT_COLUMNS = [
     "title_tmdb",
+    "mpaa_tmdb",
+    "director_tmdb",
     "title_OL",
     "title_HC",
     "author_OL",
@@ -88,6 +90,8 @@ def best_title_match(title, candidates):
 def tmdb_lookup(tmdb_id, api_key):
     empty = {
         "title_tmdb": None,
+        "mpaa_tmdb": None,
+        "director_tmdb": None,
         "date_tmdb": None,
         "rating_tmdb": None,
         "votes_tmdb": None,
@@ -101,12 +105,36 @@ def tmdb_lookup(tmdb_id, api_key):
     data = request_json(
         "GET",
         f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}",
-        params={"api_key": api_key},
+        params={"api_key": api_key, "append_to_response": "credits,release_dates"},
     )
     if not data:
         return empty
+    directors = [
+        person.get("name")
+        for person in (data.get("credits") or {}).get("crew", [])
+        if person.get("job") == "Director" and person.get("name")
+    ]
+    us_release_dates = next(
+        (
+            country.get("release_dates", [])
+            for country in (data.get("release_dates") or {}).get("results", [])
+            if country.get("iso_3166_1") == "US"
+        ),
+        [],
+    )
+    mpaa_rating = next(
+        (
+            release.get("certification")
+            for release in us_release_dates
+            if release.get("certification")
+        ),
+        None,
+    )
+
     return {
         "title_tmdb": data.get("title"),
+        "mpaa_tmdb": mpaa_rating,
+        "director_tmdb": ", ".join(dict.fromkeys(directors)) or None,
         "date_tmdb": data.get("release_date"),
         "rating_tmdb": data.get("vote_average"),
         "votes_tmdb": data.get("vote_count"),
