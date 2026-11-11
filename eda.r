@@ -1,4 +1,4 @@
-dat <- read.csv("coverage_sample.csv", nrows = 2000, stringsAsFactors = FALSE)
+dat <- read.csv("coverage_sample.csv", nrows = 4515, stringsAsFactors = FALSE)
 
 cat("Rows in this EDA sample:", nrow(dat), "\n")
 
