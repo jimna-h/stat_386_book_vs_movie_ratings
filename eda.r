@@ -94,5 +94,20 @@ par(mfrow = c(1, 1))
 
 cat("\nRating difference summary (TMDB minus rescaled Open Library):\n")
 print(summary(dat$rating_tmdb - book_rating_OL))
+
+
+
+
+valid_finance <- subset(dat, !is.na(revenue_tmdb) & !is.na(title_tmdb) & revenue_tmdb > 0)
+if (nrow(valid_finance) > 0) {
+  lowest_revenue_rows <- valid_finance[order(valid_finance$revenue_tmdb), c("title_tmdb", "revenue_tmdb")][1:10, ]
+  cat("\nMovies with the lowest 10 positive revenues:\n")
+  print(lowest_revenue_rows)
+} else {
+  cat("\nNo movies with positive revenue were found.\n")
+}
+
 cat("\nFinancial amounts are nominal and are not adjusted for inflation.\n")
 cat("These plots are exploratory; associations do not establish causation.\n")
+
+
