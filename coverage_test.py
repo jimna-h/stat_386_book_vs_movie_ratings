@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_CSV = os.path.join(SCRIPT_DIR, "data", "raw", "wikidata_pairs.csv")
 OUTPUT_CSV = os.path.join(SCRIPT_DIR, "coverage_sample.csv")
-SAMPLE_SIZE = None  # Set to None to process every pair.
-START_ROW = 3500
+SAMPLE_SIZE = 50  # Set to None to process every pair.
+START_ROW = 2940
 MATCH_THRESHOLD = 0.85
 REQUEST_INTERVAL = 0.7
 
